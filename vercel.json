@@ -1,0 +1,9 @@
+{
+  "buildCommand": "npm install",
+  "env": [
+    "ANTHROPIC_API_KEY"
+  ],
+  "regions": [
+    "sfo1"
+  ]
+}

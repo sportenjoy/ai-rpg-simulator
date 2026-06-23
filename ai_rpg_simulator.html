@@ -1,0 +1,1458 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>萬界模擬器</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;700&family=Noto+Sans+TC:wght@300;400;500&display=swap');
+
+  :root {
+    --bg: #0D0A08;
+    --bg2: #150F0A;
+    --bg3: #1E150E;
+    --border: #3A2A1A;
+    --gold: #C9A84C;
+    --gold2: #8B6914;
+    --text: #E8D5A3;
+    --text2: #A89070;
+    --text3: #6B5030;
+    --red: #C0392B;
+    --red2: #8B1A1A;
+    --green: #2E7D32;
+    --accent: #C9A84C;
+    --scroll-bg: #1A110A;
+  }
+
+  /* Theme overrides */
+  .theme-xiuxian { --accent: #5DADE2; --gold: #5DADE2; --gold2: #2E86AB; --border: #1A3A4A; }
+  .theme-harry { --accent: #7B2FBE; --gold: #C9A84C; --gold2: #7B2FBE; --border: #3A1A5A; }
+  .theme-sanguo { --accent: #E74C3C; --gold: #E74C3C; --gold2: #922B21; --border: #4A1A1A; }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Noto Serif TC', serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── Top Bar ── */
+  #topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 16px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    gap: 8px;
+  }
+
+  #title-area { display: flex; align-items: baseline; gap: 8px; }
+  #game-title { font-size: 1.1rem; color: var(--gold); letter-spacing: 0.1em; font-weight: 700; }
+  #world-badge {
+    font-size: 0.7rem;
+    color: var(--text2);
+    border: 1px solid var(--border);
+    padding: 1px 6px;
+    border-radius: 2px;
+    letter-spacing: 0.05em;
+  }
+
+  #topbar-actions { display: flex; gap: 6px; align-items: center; }
+
+  .btn-sm {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 0.72rem;
+    padding: 4px 10px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text2);
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .btn-sm:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-sm.active { border-color: var(--accent); color: var(--accent); background: rgba(201,168,76,0.08); }
+
+  /* ── Layout ── */
+  #main-layout {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* ── Stats Panel ── */
+  #stats-panel {
+    width: 220px;
+    min-width: 220px;
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    transition: width 0.3s ease, min-width 0.3s ease, opacity 0.3s;
+    overflow: hidden;
+  }
+  #stats-panel.hidden {
+    width: 0;
+    min-width: 0;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  #stats-inner { padding: 12px; overflow-y: auto; flex: 1; min-width: 220px; }
+
+  .stats-section-title {
+    font-size: 0.65rem;
+    color: var(--text3);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin: 12px 0 6px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--border);
+  }
+  .stats-section-title:first-child { margin-top: 0; }
+
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.75rem;
+    padding: 3px 0;
+    color: var(--text2);
+  }
+  .stat-row .stat-label { color: var(--text3); }
+  .stat-row .stat-val { color: var(--text); font-weight: 500; }
+  .stat-row .stat-val.high { color: #5DADE2; }
+  .stat-row .stat-val.med { color: var(--gold); }
+  .stat-row .stat-val.low { color: var(--red); }
+
+  .hp-bar, .mp-bar {
+    width: 100%;
+    height: 5px;
+    background: var(--border);
+    border-radius: 3px;
+    margin: 2px 0 4px;
+    overflow: hidden;
+  }
+  .hp-fill { height: 100%; background: #C0392B; border-radius: 3px; transition: width 0.4s; }
+  .mp-fill { height: 100%; background: #2980B9; border-radius: 3px; transition: width 0.4s; }
+
+  .item-chip {
+    font-size: 0.68rem;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 2px 6px;
+    margin: 2px 2px 0 0;
+    display: inline-block;
+    color: var(--text2);
+  }
+  #items-area { margin-top: 4px; }
+
+  /* ── Chat Area ── */
+  #chat-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-width: 0;
+  }
+
+  #story-feed {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    scroll-behavior: smooth;
+  }
+  #story-feed::-webkit-scrollbar { width: 4px; }
+  #story-feed::-webkit-scrollbar-track { background: transparent; }
+  #story-feed::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .story-block {
+    animation: fadeIn 0.4s ease;
+  }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  .story-narration {
+    font-size: 0.9rem;
+    line-height: 1.85;
+    color: var(--text);
+    border-left: 2px solid var(--border);
+    padding-left: 14px;
+  }
+  .story-narration .scene-title {
+    font-size: 0.7rem;
+    color: var(--gold);
+    letter-spacing: 0.15em;
+    margin-bottom: 8px;
+    display: block;
+  }
+  .story-system {
+    font-size: 0.78rem;
+    color: var(--text3);
+    text-align: center;
+    letter-spacing: 0.08em;
+    padding: 4px 0;
+    font-style: italic;
+  }
+  .story-player {
+    font-size: 0.85rem;
+    color: var(--gold);
+    line-height: 1.7;
+    padding-left: 14px;
+    border-left: 2px solid var(--gold2);
+  }
+  .story-player::before { content: '你：'; color: var(--gold2); }
+
+  .choices-block {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .choice-btn {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 0.83rem;
+    text-align: left;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    padding: 9px 14px;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.2s;
+    line-height: 1.5;
+  }
+  .choice-btn:hover { border-color: var(--accent); color: var(--text); background: rgba(201,168,76,0.06); }
+  .choice-btn .choice-num { color: var(--accent); margin-right: 8px; font-weight: 700; }
+
+  /* ── Input Area ── */
+  #input-area {
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+    background: var(--bg2);
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+    flex-shrink: 0;
+  }
+  #player-input {
+    flex: 1;
+    font-family: 'Noto Serif TC', serif;
+    font-size: 0.85rem;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 9px 12px;
+    border-radius: 2px;
+    resize: none;
+    outline: none;
+    min-height: 42px;
+    max-height: 100px;
+    transition: border-color 0.2s;
+  }
+  #player-input:focus { border-color: var(--accent); }
+  #player-input::placeholder { color: var(--text3); }
+
+  #send-btn {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 0.82rem;
+    padding: 9px 16px;
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    cursor: pointer;
+    border-radius: 2px;
+    font-weight: 700;
+    transition: opacity 0.2s;
+    white-space: nowrap;
+    align-self: stretch;
+  }
+  #send-btn:hover { opacity: 0.85; }
+  #send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── Load Game Modal ── */
+  #load-game-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 250;
+    padding: 20px;
+  }
+  #load-game-modal.hidden { display: none; }
+
+  #load-game-box {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    max-width: 450px;
+    width: 100%;
+    padding: 24px;
+    border-radius: 2px;
+  }
+  #load-game-box h2 {
+    font-size: 1rem;
+    color: var(--gold);
+    letter-spacing: 0.1em;
+    margin-bottom: 6px;
+  }
+  #load-game-box .modal-sub {
+    font-size: 0.75rem;
+    color: var(--text3);
+    margin-bottom: 16px;
+    line-height: 1.6;
+  }
+
+  /* ── Mobile Optimization ── */
+  @media (max-width: 768px) {
+    body { font-size: 14px; }
+    
+    #topbar {
+      padding: 6px 12px;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    #game-title { font-size: 1rem; }
+    #world-badge { font-size: 0.65rem; }
+    
+    .btn-sm {
+      font-size: 0.68rem;
+      padding: 3px 8px;
+    }
+    
+    #stats-panel {
+      width: 180px;
+      min-width: 180px;
+    }
+    #stats-inner { padding: 10px; }
+    
+    .stats-section-title { font-size: 0.62rem; margin: 10px 0 5px; }
+    .stat-row { font-size: 0.7rem; padding: 2px 0; }
+    
+    #story-feed {
+      padding: 14px 16px;
+      gap: 12px;
+    }
+    
+    .story-narration, .story-player {
+      font-size: 0.8rem;
+      line-height: 1.7;
+    }
+    
+    .choice-btn {
+      font-size: 0.78rem;
+      padding: 8px 12px;
+    }
+    
+    .choice-num { margin-right: 6px; }
+    
+    #player-input {
+      font-size: 0.8rem;
+      padding: 8px 10px;
+      min-height: 36px;
+    }
+    
+    #send-btn {
+      font-size: 0.78rem;
+      padding: 8px 12px;
+      white-space: nowrap;
+    }
+    
+    #modal-box {
+      max-width: 95vw;
+      padding: 18px;
+    }
+    
+    #modal-box h2 { font-size: 0.95rem; }
+    #modal-box .modal-sub { font-size: 0.7rem; margin-bottom: 14px; }
+    
+    .world-grid {
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      gap: 6px;
+    }
+    
+    .world-card {
+      padding: 10px 8px;
+    }
+    .world-card .wc-icon { font-size: 1.2rem; margin-bottom: 4px; }
+    .world-card .wc-name { font-size: 0.75rem; }
+    .world-card .wc-desc { font-size: 0.6rem; margin-top: 2px; }
+    
+    #api-key-box, #load-game-box {
+      max-width: 95vw;
+      padding: 18px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    #main-layout {
+      flex-direction: column;
+    }
+    
+    #stats-panel {
+      width: 100%;
+      min-width: unset;
+      border-right: none;
+      border-bottom: 1px solid var(--border);
+      max-height: 120px;
+      order: -1;
+    }
+    #stats-panel.hidden {
+      max-height: 0;
+      border-bottom: none;
+    }
+    
+    #topbar { padding: 8px 12px; }
+    #topbar-actions { width: 100%; }
+    
+    .btn-sm { flex: 1; }
+  }
+
+  /* ── World Select Modal ── */
+  #modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 20px;
+  }
+  #modal-overlay.hidden { display: none; }
+
+  #modal-box {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    max-width: 600px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 24px;
+    border-radius: 2px;
+  }
+  #modal-box h2 {
+    font-size: 1rem;
+    color: var(--gold);
+    letter-spacing: 0.1em;
+    margin-bottom: 6px;
+  }
+  #modal-box .modal-sub {
+    font-size: 0.75rem;
+    color: var(--text3);
+    margin-bottom: 20px;
+    line-height: 1.6;
+  }
+
+  .world-category { margin-bottom: 20px; }
+  .world-category-title {
+    font-size: 0.68rem;
+    color: var(--text3);
+    letter-spacing: 0.15em;
+    margin-bottom: 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .world-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 8px;
+  }
+
+  .world-card {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    padding: 12px 10px;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.2s;
+    text-align: center;
+  }
+  .world-card:hover { border-color: var(--accent); background: rgba(201,168,76,0.06); }
+  .world-card.selected { border-color: var(--accent); background: rgba(201,168,76,0.12); }
+  .world-card .wc-icon { font-size: 1.5rem; margin-bottom: 6px; }
+  .world-card .wc-name { font-size: 0.8rem; color: var(--text); font-weight: 500; }
+  .world-card .wc-desc { font-size: 0.65rem; color: var(--text3); margin-top: 3px; line-height: 1.4; }
+
+  .modal-name-row {
+    display: flex;
+    gap: 10px;
+    margin: 16px 0 20px;
+    align-items: center;
+  }
+  .modal-name-row label { font-size: 0.78rem; color: var(--text2); white-space: nowrap; }
+  .modal-name-row input {
+    flex: 1;
+    font-family: 'Noto Serif TC', serif;
+    font-size: 0.85rem;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 7px 10px;
+    border-radius: 2px;
+    outline: none;
+  }
+  .modal-name-row input:focus { border-color: var(--accent); }
+
+  #start-btn {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 0.9rem;
+    width: 100%;
+    padding: 12px;
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    cursor: pointer;
+    border-radius: 2px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    transition: opacity 0.2s;
+  }
+  #start-btn:hover { opacity: 0.85; }
+  #start-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── Loading ── */
+  .loading-dots {
+    display: inline-flex;
+    gap: 5px;
+    align-items: center;
+    padding: 4px 14px;
+    color: var(--text3);
+    font-size: 0.85rem;
+  }
+  .dot { width: 5px; height: 5px; background: var(--text3); border-radius: 50%; animation: pulse 1.2s infinite; }
+  .dot:nth-child(2) { animation-delay: 0.2s; }
+  .dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes pulse { 0%,60%,100% { opacity:0.3; } 30% { opacity:1; } }
+
+  /* ── Death Screen ── */
+  #death-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.92);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    flex-direction: column;
+    gap: 16px;
+  }
+  #death-overlay.hidden { display: none; }
+  #death-overlay h2 { color: var(--red); font-size: 1.8rem; letter-spacing: 0.2em; }
+  #death-overlay p { color: var(--text2); font-size: 0.85rem; text-align: center; max-width: 300px; line-height: 1.7; }
+  #restart-btn {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 0.85rem;
+    padding: 10px 28px;
+    background: transparent;
+    border: 1px solid var(--red);
+    color: var(--red);
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.2s;
+  }
+  #restart-btn:hover { background: var(--red); color: #fff; }
+
+  /* ── Stats Toggle Button ── */
+  #stats-toggle {
+    position: relative;
+  }
+
+  /* scrollbar */
+  #modal-box::-webkit-scrollbar { width: 4px; }
+  #modal-box::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .divider { border: none; border-top: 1px solid var(--border); margin: 4px 0; }
+
+  #npc-list { font-size: 0.72rem; }
+  .npc-entry { padding: 3px 0; border-bottom: 1px solid rgba(58,42,26,0.5); }
+  .npc-entry:last-child { border-bottom: none; }
+  .npc-name { color: var(--text); }
+  .npc-rel { color: var(--text3); font-size: 0.65rem; }
+
+  #error-msg {
+    font-size: 0.75rem;
+    color: var(--red);
+    text-align: center;
+    padding: 6px;
+    display: none;
+  }
+</style>
+</head>
+<body>
+
+<!-- Load Game Modal -->
+<div id="load-game-modal" class="hidden">
+  <div id="load-game-box">
+    <h2>💾 繼續遊戲</h2>
+    <p class="modal-sub">偵測到已儲存的遊戲進度。你想繼續上次的遊戲嗎？</p>
+    
+    <div id="save-info" style="background:var(--bg3); border:1px solid var(--border); padding:12px; border-radius:2px; margin:16px 0; font-size:0.75rem; color:var(--text2); line-height:1.8;">
+      <div>📖 <strong id="save-world">世界</strong></div>
+      <div>👤 <strong id="save-char">角色</strong></div>
+      <div>⏱️ <strong id="save-time">時間</strong></div>
+    </div>
+
+    <div style="display:flex; gap:8px;">
+      <button onclick="loadGame()" style="flex:1; font-family:'Noto Serif TC',serif; font-size:0.85rem; padding:10px; background:var(--accent); color:var(--bg); border:none; cursor:pointer; border-radius:2px; font-weight:700;">繼續遊戲</button>
+      <button onclick="startNewGame()" style="flex:1; font-family:'Noto Serif TC',serif; font-size:0.85rem; padding:10px; background:transparent; border:1px solid var(--border); color:var(--text2); cursor:pointer; border-radius:2px;">重新開始</button>
+    </div>
+  </div>
+</div>
+
+<!-- World Select Modal -->
+<div id="modal-overlay" class="hidden">
+  <div id="modal-box">
+    <h2>⚔ 萬界模擬器</h2>
+    <p class="modal-sub">選擇你要踏入的世界，AI 將即時生成專屬於你的命運。每個 NPC 都有自己的生活、祕密與立場，你的選擇將真實影響這個世界。</p>
+
+    <div class="world-category">
+      <div class="world-category-title">▸ 修仙界</div>
+      <div class="world-grid">
+        <div class="world-card" data-world="fanren" data-theme="xiuxian" onclick="selectWorld(this)">
+          <div class="wc-icon">🌀</div>
+          <div class="wc-name">凡人修仙傳</div>
+          <div class="wc-desc">與韓立同處一世，但命運各異</div>
+        </div>
+        <div class="world-card" data-world="xiuxian" data-theme="xiuxian" onclick="selectWorld(this)">
+          <div class="wc-icon">☁️</div>
+          <div class="wc-name">修仙傳</div>
+          <div class="wc-desc">凡人修仙傳＋仙逆融合世界</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="world-category">
+      <div class="world-category-title">▸ 武俠江湖（金庸世界）</div>
+      <div class="world-grid">
+        <div class="world-card" data-world="wuxia" data-theme="wuxia" onclick="selectWorld(this)">
+          <div class="wc-icon">⚔️</div>
+          <div class="wc-name">武俠江湖</div>
+          <div class="wc-desc">天龍八部・射鵰英雄傳・神鵰俠侶的江湖世界</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="world-category">
+      <div class="world-category-title">▸ 三國亂世</div>
+      <div class="world-grid">
+        <div class="world-card" data-world="sanguo" data-theme="sanguo" onclick="selectWorld(this)">
+          <div class="wc-icon">🏯</div>
+          <div class="wc-name">三國</div>
+          <div class="wc-desc">亂世梟雄，逐鹿天下</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="world-category">
+      <div class="world-category-title">▸ 魔法世界</div>
+      <div class="world-grid">
+        <div class="world-card" data-world="harry" data-theme="harry" onclick="selectWorld(this)">
+          <div class="wc-icon">🪄</div>
+          <div class="wc-name">哈利波特</div>
+          <div class="wc-desc">霍格華茲，魔法冒險（1–7集）</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-name-row">
+      <label>你的角色名稱</label>
+      <input type="text" id="char-name-input" placeholder="輸入角色名稱…" maxlength="12">
+    </div>
+
+    <button id="start-btn" onclick="startGame()" disabled>選擇世界並輸入名稱後開始</button>
+  </div>
+</div>
+
+<!-- Death Overlay -->
+<div id="death-overlay" class="hidden">
+  <h2>⚰ 你已隕落</h2>
+  <p id="death-msg">你的故事就此終結……但命運從不只有一條路。</p>
+  <button id="restart-btn" onclick="restartGame()">↺ 重新來過</button>
+</div>
+
+<!-- Top Bar -->
+<div id="topbar">
+  <div id="title-area">
+    <span id="game-title">萬界模擬器</span>
+    <span id="world-badge">—</span>
+  </div>
+  <div id="topbar-actions">
+    <button class="btn-sm" id="stats-toggle" onclick="toggleStats()">📊 狀態欄</button>
+    <button class="btn-sm" onclick="showWorldSelect()">🌐 切換世界</button>
+  </div>
+</div>
+
+<!-- Main Layout -->
+<div id="main-layout">
+  <!-- Stats Panel -->
+  <div id="stats-panel">
+    <div id="stats-inner">
+      <div class="stats-section-title">角色</div>
+      <div class="stat-row">
+        <span class="stat-label">名稱</span>
+        <span class="stat-val" id="s-name">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">境界 / 職業</span>
+        <span class="stat-val" id="s-realm">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label" id="s-hp-label">生命</span>
+        <span class="stat-val" id="s-hp">100/100</span>
+      </div>
+      <div class="hp-bar"><div class="hp-fill" id="hp-fill" style="width:100%"></div></div>
+      <div class="stat-row">
+        <span class="stat-label" id="s-mp-label">靈力/內力</span>
+        <span class="stat-val" id="s-mp">100/100</span>
+      </div>
+      <div class="mp-bar"><div class="mp-fill" id="mp-fill" style="width:100%"></div></div>
+      <div class="stat-row">
+        <span class="stat-label" id="s-gold-label">銀兩</span>
+        <span class="stat-val" id="s-gold">0</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">位置</span>
+        <span class="stat-val" id="s-location" style="font-size:0.7rem">—</span>
+      </div>
+
+      <div class="stats-section-title" id="s-skill-title">武功 / 技能</div>
+      <div id="skills-area" style="font-size:0.72rem; color:var(--text2); line-height:1.8;">—</div>
+
+      <div class="stats-section-title">重要物品</div>
+      <div id="items-area">—</div>
+
+      <hr class="divider" style="margin:12px 0;">
+      <div class="stats-section-title">江湖人物</div>
+      <div id="npc-list"><span style="font-size:0.72rem;color:var(--text3)">尚未遇見任何人</span></div>
+    </div>
+  </div>
+
+  <!-- Chat Area -->
+  <div id="chat-area">
+    <div id="story-feed">
+      <div class="story-system">選擇世界，開始你的傳奇……</div>
+    </div>
+    <div id="error-msg">⚠ AI 回應失敗，請稍後再試</div>
+    <div id="input-area">
+      <textarea id="player-input" placeholder="輸入你的行動，或選擇上方數字選項…" rows="1" onkeydown="handleKeydown(event)" oninput="autoResize(this)"></textarea>
+      <button id="send-btn" onclick="sendAction()" disabled>行動</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+// WORLD CONFIGS
+// ══════════════════════════════════════════
+const WORLDS = {
+  fanren: {
+    name: '凡人修仙傳',
+    theme: 'xiuxian',
+    badge: '凡人修仙・靈界',
+    hpLabel: '生命',
+    mpLabel: '靈力',
+    goldLabel: '靈石',
+    realmLabel: '境界',
+    skillTitle: '功法・法寶',
+    startRealm: '煉氣一層',
+    systemPrompt: `你是一個沉浸式修仙文字 RPG 的主持人，世界觀基於《凡人修仙傳》原著。
+
+【世界設定】
+修煉境界（低至高）：煉氣期（1-13層）→築基期→結丹期→元嬰期→化神期→煉虛期→合體期→大乘期→渡劫期→仙人。
+五行靈根（金木水火土）決定修煉資質，靈根越雜越難修煉。
+重要門派：黃楓谷、墨大夫奇門、天奇門、星辰門、婆羅宗等。
+重要地域：平天國北境、黃楓谷山門、天南地區。
+存在法寶、功法、符籙、靈藥、靈獸。
+
+【關於韓立】
+韓立是本世界的重要人物，有自己獨立的人生軌跡。他不是玩家的同伴或跟班。
+玩家角色與韓立是平行存在的不同人，可能在某些場合偶然相遇，但韓立的行程、目標、態度完全按照他本人的性格和原著脈絡——謹慎、內斂、不輕易與人深交。
+初期若玩家與韓立相遇，韓立對陌生人保持禮貌但距離，不會主動親近。只有通過真實的共事、考驗、救急才可能逐漸建立關係。
+
+【NPC 規則（核心）】
+- 所有 NPC 有自己的修煉計畫、師門義務、人際關係和秘密，不以玩家為中心
+- 玩家靈根資質、行為口碑、實力強弱會真實影響 NPC 態度
+- 關係變化緩慢：陌生人→點頭之交→同門→信任，需累積事件
+- 門派師兄弟之間有競爭、嫌隙、派系，玩家入門後會面對複雜人際
+- 不同性格的 NPC 對同一行為反應完全不同（謹慎者多疑，豪爽者欣賞）
+- 實力差距顯著時，弱者會被欺壓；達到相當實力後才能得到尊重
+
+【狀態追蹤】每次回應結尾必須附上：
+【狀態更新】{"hp":數字,"hpMax":數字,"mp":數字,"mpMax":數字,"gold":數字,"realm":"境界","location":"地點","skills":["功法"],"items":["物品"],"npcs":[{"name":"名","rel":"關係"}],"isDead":false}
+
+【敘事要求】
+- 第二人稱（你）敘述，文筆優美帶仙俠氣息，每次200-350字
+- 每次提供3-4個數字選項，也接受玩家自由輸入
+- HP歸零設isDead:true，觸發死亡`,
+    openingPrompt: (name) => `遊戲開始。玩家角色名稱為「${name}」，是來自平天國北境小村的普通少年，靈根資質未知。
+今日黃楓谷門人下山招收弟子，凡14歲以下孩童皆可參加靈根測試，入選者將有機會踏入修仙之路。
+請從${name}抵達測試現場開始描述——人群的樣貌、其他孩子的神情、主持測試的門人、以及測試前的緊張氣氛，並帶出第一個需要做出的抉擇。
+結尾附上初始狀態JSON（hp:100,hpMax:100,mp:50,mpMax:50,gold:0,realm:"煉氣一層待測",location:"黃楓谷招生點"）。`
+  },
+
+  xiuxian: {
+    name: '修仙傳',
+    theme: 'xiuxian',
+    badge: '修仙傳・問道',
+    hpLabel: '生命',
+    mpLabel: '靈氣',
+    goldLabel: '靈石',
+    realmLabel: '境界',
+    skillTitle: '功法・神通',
+    startRealm: '煉氣一層',
+    systemPrompt: `你是一個融合《凡人修仙傳》與《仙逆》世界觀的修仙文字 RPG 主持人。
+
+【世界設定】
+本世界融合了兩部作品的元素：
+- 境界體系（凡人修仙傳為主）：煉氣（1-13層）→築基→結丹→元嬰→化神→煉虛→合體→大乘→渡劫→仙人
+- 仙逆元素：部分地區流行「通脈→晶化」的不同修煉路線，傳承秘法以石碑、古洞形式存在，王林家族的事蹟作為遙遠傳說流傳
+- 靈根、法寶、符籙、靈丹、靈獸均存在
+- 宗門、散修、家族勢力並存；競爭激烈，弱肉強食
+
+【NPC 規則】
+- NPC 有自己的修煉道路、宗門任務、競爭對手，不圍繞玩家存在
+- 宗門師兄弟之間存在真實的利益競爭和資源爭奪
+- 弱小者容易被欺壓；實力是在修仙界獲得尊重的根本
+- 關係需要通過共同患難、利益交換或長期相處才能建立
+- 原著中韓立、王林的故事作為世界傳說存在，玩家不會直接遭遇他們
+
+【狀態追蹤】每次回應結尾必須附上：
+【狀態更新】{"hp":數字,"hpMax":數字,"mp":數字,"mpMax":數字,"gold":數字,"realm":"境界","location":"地點","skills":["功法"],"items":["物品"],"npcs":[{"name":"名","rel":"關係"}],"isDead":false}
+
+第二人稱敘述，文筆帶仙俠氣息，每次200-350字，提供3-4個數字選項，HP歸零設isDead:true。`,
+    openingPrompt: (name) => `遊戲開始，玩家「${name}」是一個出身平凡的少年，偶然在山林中發現了一塊刻有古老功法的石碑，在模糊辨認出幾個字後，察覺自己似乎站在修仙之路的入口……
+描述發現石碑的場景、周圍的環境氣息、以及第一道抉擇。附上初始狀態JSON（hp:100,hpMax:100,mp:50,mpMax:50,gold:0,realm:"凡人・未入道",location:"荒山石碑前"）。`
+  },
+
+  wuxia: {
+    name: '武俠江湖',
+    theme: 'wuxia',
+    badge: '金庸・江湖',
+    hpLabel: '生命',
+    mpLabel: '內力',
+    goldLabel: '銀兩',
+    realmLabel: '武學境界',
+    skillTitle: '武功・輕功',
+    startRealm: '初窺門徑',
+    systemPrompt: `你是金庸武俠江湖 RPG 的主持人。本世界融合《天龍八部》、《射鵰英雄傳》、《神鵰俠侶》三部作品的人物、地點與武學，構成一個完整的江湖世界，時代橫跨北宋至南宋中期。
+
+【世界地圖與勢力】
+- 北宋年間：遼、宋、大理、西夏並立；少林、丐幫、逍遙派、星宿派等門派鼎立
+- 南宋年間：金國南侵、蒙古崛起；全真教、古墓派、桃花島、丐幫活躍
+- 重要地點：少林寺、丐幫總舵、大理城、桃花島、古墓、襄陽城、終南山、嘉興醉仙樓
+
+【主要 NPC 個性（核心規則）】
+天龍人物——
+・蕭峰（喬峰）：豪邁大氣、重義輕生，不輕易結交陌生人，一旦認定是兄弟便肝腦塗地。目前身處幫主風波的漩渦中，心事重重。
+・段譽：皇室出身，溫文儒雅，容易被美麗女子迷住，常惹麻煩。對真誠待他的人容易敞開心扉。
+・虛竹：老實憨厚，入世未深，對江湖規矩一知半解，善良但偶爾笨拙。
+・慕容復：表面儒雅，內心對復國念念不忘，行事常帶算計，對能利用之人友善，對障礙者冷酷。
+射鵰人物——
+・郭靖：忠厚老實、反應稍慢，對人真誠但需要時間才能深交。重情義，對國對民有大義。
+・黃蓉：聰明伶俐、善察人心，對陌生人多疑，第一印象若差則難以翻身。
+・黃藥師：孤僻古怪，行事我行我素，外人難以靠近，但對有才學者另眼相看。
+・洪七公：豪爽義氣、愛美食，對真正的英雄豪傑欣賞，不喜歡耍小聰明的人。
+神鵰人物——
+・楊過：孤傲不羈，有深層心理創傷，對外界保持防衛，但真心付出時可赴湯蹈火。
+・小龍女：性情淡漠，幾乎只在乎楊過，對外人保持禮貌而疏離的距離。
+・郭芙：高傲任性，看不起不如她的人，容易衝動，但內心並非壞人。
+・李莫愁：心狠手辣，因情所傷而仇恨世界，遇到真情則偶有觸動。
+
+【NPC 核心規則】
+- 每位 NPC 都有自己的人生行程，不是等待玩家的道具
+- 玩家必須通過累積義氣、救急患難、功績聲望才能建立關係
+- 關係分層：陌生→聽過此人→點頭之交→同行過→信任的朋友，每層都需要真實事件
+- 不同門派人士對外人有天然戒心；幫派成員的信任需要先得到整個幫派的認可
+- 同一行為，蕭峰可能欣賞，慕容復可能算計，黃蓉可能懷疑——性格決定反應
+- 感情線若玩家不主動推進，NPC 不會主動示好；推進時需符合 NPC 個性節奏
+
+【武學體系】
+境界（低至高）：初窺門徑→略有小成→登堂入室→爐火純青→出神入化→天下無雙
+重要武功：降龍十八掌、六脈神劍、北冥神功、凌波微步、黯然銷魂掌、九陰真經、打狗棒法、一陽指、玉女心經等
+
+【狀態追蹤】每次回應結尾必須附上：
+【狀態更新】{"hp":數字,"hpMax":數字,"mp":數字,"mpMax":數字,"gold":數字,"realm":"武學境界","location":"地點","skills":["武功"],"items":["物品"],"npcs":[{"name":"名","rel":"關係"}],"isDead":false}
+
+【敘事要求】
+- 第二人稱（你）敘述，文筆帶金庸從容大氣的筆法，每次200-350字
+- 提供3-4個數字選項，接受玩家自由輸入
+- HP歸零設isDead:true`,
+    openingPrompt: (name) => `遊戲開始。玩家「${name}」是一個在江湖中闖蕩多年卻尚未出名的武者，身無門派，憑一身粗淺武藝四處謀生。
+某日傍晚，${name}風塵僕僕地走進一家小鎮酒館，準備歇腳。酒館中已有數桌客人，其中一桌幾名丐幫弟子正低聲議論什麼，神色凝重；角落裡一名書生模樣的年輕人獨自飲酒，眼神卻不時打量四周。
+窗外，遠處傳來一陣急促的馬蹄聲，似乎有什麼事正在醞釀……
+請從此場景展開，描述酒館細節與各人神情，帶出玩家面對的第一個抉擇。附上初始狀態JSON（hp:100,hpMax:100,mp:60,mpMax:60,gold:50,realm:"初窺門徑",location:"小鎮酒館"）。`
+  },
+
+  sanguo: {
+    name: '三國',
+    theme: 'sanguo',
+    badge: '漢末・亂世',
+    hpLabel: '生命',
+    mpLabel: '謀略',
+    goldLabel: '錢糧',
+    realmLabel: '官職 / 身份',
+    skillTitle: '兵法・技藝',
+    startRealm: '無名之輩',
+    systemPrompt: `你是三國亂世 RPG 的主持人。時代：東漢末年，黃巾之亂後，諸侯割據，英雄輩出。
+
+【世界設定】
+重要勢力：曹操（挾天子以令諸侯）、劉備（仁義之名廣傳）、孫權（江東固守）、袁紹、呂布等諸侯。
+重要謀士武將：諸葛亮（隱居隆中，未出山前不輕易見人）、關羽（義薄雲天）、張飛（粗中有細）、趙雲（忠勇）、周瑜（雄才妒忌）、荀彧（輔佐曹操的謀士）。
+重要地點：許都（曹操根基）、新野（劉備暫居）、江東（孫權）、荊州、益州。
+
+【NPC 個性規則（核心）】
+・曹操：雄才大略，識人有術，但生性多疑。對有才之人青睞有加，但有二心者必殺之。喜歡才能，但更在乎忠心。
+・劉備：仁義寬厚，禮賢下士，但同樣有自己的政治算計。真心待人，但對損害大義者不容。
+・關羽：重義輕財，傲上而不欺下。對草莽之輩不冷不熱，對忠義之士惺惺相惜。驕傲，不接受施捨。
+・張飛：粗豪豪爽，愛喝酒，對有真本事的人佩服，對軟弱無能者鄙視。
+・諸葛亮：足智多謀，尚未出山，在隆中隱居。輕易不見外客，需要緣分才能相遇。
+・周瑜：英才，但妒忌心強，對能力超過自己的人心存戒備。
+
+【NPC 核心規則】
+- 每個 NPC 都在推進自己的事業，不會停下來等玩家
+- 陣營選擇（投曹/投劉/投孫/獨立）影響整個後續走向，一旦選邊，對立陣營視為潛在敵人
+- 信任的建立需要功績、忠誠度和共同患難；才能決定是否得到重用
+- 戰局會隨劇情自然推進，玩家若長期無所作為，局勢也會在身邊改變
+- mp 在此代表「謀略/士氣」，gold 代表「錢糧/財資」
+
+【狀態追蹤】每次回應結尾必須附上：
+【狀態更新】{"hp":數字,"hpMax":數字,"mp":數字,"mpMax":數字,"gold":數字,"realm":"官職身份","location":"地點","skills":["兵法技藝"],"items":["物品"],"npcs":[{"name":"名","rel":"關係"}],"isDead":false}
+
+第二人稱，帶漢魏文風，200-350字，提供3-4個數字選項，HP歸零設isDead:true。`,
+    openingPrompt: (name) => `遊戲開始。玩家「${name}」是亂世中一個出身普通的年輕人，黃巾之亂平定後，流落至中原某縣城，目睹了戰後民生凋敝、諸侯各自擁兵的亂象。
+某日，城中傳來消息：一支諸侯的徵兵隊正在城內招募士兵和謀士，同時有另一批江湖義士在城外聚集，聲稱要另立門戶……
+描述初始場景的氣氛、城中的人來人往，帶出第一個抉擇。附上初始狀態JSON（hp:100,hpMax:100,mp:60,mpMax:60,gold:30,realm:"無名之輩",location:"中原某縣城"）。`
+  },
+
+  harry: {
+    name: '哈利波特',
+    theme: 'harry',
+    badge: '霍格華茲・魔法',
+    hpLabel: '生命',
+    mpLabel: '魔法能量',
+    goldLabel: '金加隆',
+    realmLabel: '年級 / 學院',
+    skillTitle: '咒語・魔藥',
+    startRealm: '一年級・待分院',
+    systemPrompt: `你是哈利波特世界的 RPG 主持人（繁體中文，基於原著1-7集，J.K.羅琳的完整世界觀）。
+
+【世界設定】
+霍格華茲魔法與巫術學校，七年制。四個學院：葛來分多（勇敢）、史萊哲林（野心）、赫夫帕夫（忠誠勤奮）、雷文克勞（聰慧）。
+重要地點：大禮堂、各學院休息室、圖書館、禁忌森林、溫室、魁地奇球場、地下城（石內卜的教室）、黑魔法防禦術教室。
+魔法世界機構：奧古瑞部、古靈閣、斜角巷、活米村。
+
+【主要 NPC 個性】
+・哈利・波特：正義感強，不喜歡出風頭，對真心朋友忠誠，對不公平的事容易衝動反應。有自己的任務和麻煩，不是玩家的嚮導。
+・妙麗・格蘭傑：學習成績優異，有些說教，對規則認真，但面對真正的困難時是可靠的盟友。對粗心馬虎者不耐煩。
+・榮恩・衛斯理：熱心腸，有些自卑，家境普通，對真朋友忠誠，但容易嫉妒。對陌生人需要時間熟悉。
+・德拉科・馬份：傲慢，重視純血家世，天生看不起麻瓜出身或成績不佳者，喜歡在有權力的人面前表現。短期內不可能對非史萊哲林玩家友善。
+・賽佛勒斯・石內卜：對所有學生嚴苛，對史萊哲林學院有明顯偏袒。內心複雜，有深藏的秘密與動機。不輕易讚美任何人。
+・鄧不利多：深不可測，似乎無所不知，對學生溫和但保持距離，在重要時刻才會直接介入。
+・海格：溫和熱心，對神奇生物有無限熱情，對哈利等人特別照顧，但有時說出不該說的話。
+
+【NPC 核心規則】
+- 哈利、妙麗、榮恩有自己的故事線進展，玩家是獨立存在的另一個學生
+- 學院歸屬深深影響誰對你友善：葛來分多與史萊哲林之間天生緊張
+- 關係需要共同上課、合作完成任務、互相救助才能真實建立
+- 魔法世界有嚴格規則：禁止未成年巫師在校外使用魔法、走廊禁止施咒決鬥
+- 每個學期有考試、課業壓力，這些對 NPC 的情緒和時間有真實影響
+- 黑魔法勢力（死亡食客、佛地魔）的陰影在較高年級時逐漸加重
+
+【狀態追蹤】每次回應結尾必須附上：
+【狀態更新】{"hp":數字,"hpMax":數字,"mp":數字,"mpMax":數字,"gold":數字,"realm":"年級學院","location":"地點","skills":["咒語魔藥"],"items":["物品"],"npcs":[{"name":"名","rel":"關係"}],"isDead":false}
+
+第二人稱，帶原著奇幻溫暖氣氛，200-350字，提供3-4個數字選項，HP歸零設isDead:true。`,
+    openingPrompt: (name) => `遊戲開始，玩家「${name}」是一個剛滿十一歲、收到霍格華茲入學通知書的新生。
+在9¾月台，人潮擁擠，紅色的霍格華茲特快列車冒著白煙停在月台邊。衛斯理家的幾個紅頭孩子正在幫媽媽搬行李箱，一個戴著圓框眼鏡的黑髮男孩獨自推著行李車望向月台……
+描述月台的熱鬧景象、列車即將啟動前的氣氛，以及${name}面臨的第一個選擇（找包廂、和人搭話，或是注意到什麼有趣的事）。
+附上初始狀態JSON（hp:100,hpMax:100,mp:80,mpMax:80,gold:50,realm:"一年級・待分院",location:"9¾月台"）。`
+  }
+};
+
+// ══════════════════════════════════════════
+// API CONFIGURATION
+// ══════════════════════════════════════════
+const API_ENDPOINT = process.env.NODE_ENV === 'development' 
+  ? 'http://localhost:3000/api/chat'
+  : 'https://api-proxy.vercel.app/api/chat';  // Replace with your actual Vercel URL
+
+// ══════════════════════════════════════════
+// SAVE/LOAD SYSTEM
+// ══════════════════════════════════════════
+function saveGame() {
+  if (!currentWorld || !characterName) return;
+  
+  const saveData = {
+    worldKey: selectedWorldKey,
+    worldName: currentWorld.name,
+    characterName: characterName,
+    conversationHistory: conversationHistory,
+    gameState: gameState,
+    timestamp: new Date().toISOString()
+  };
+  
+  localStorage.setItem('gameProgress', JSON.stringify(saveData));
+}
+
+function getSaveData() {
+  const data = localStorage.getItem('gameProgress');
+  return data ? JSON.parse(data) : null;
+}
+
+function checkForSavedGame() {
+  const saveData = getSaveData();
+  if (saveData && saveData.worldKey && saveData.characterName) {
+    showLoadGameModal(saveData);
+    return true;
+  }
+  return false;
+}
+
+function showLoadGameModal(saveData) {
+  const modal = document.getElementById('load-game-modal');
+  document.getElementById('save-world').textContent = saveData.worldName;
+  document.getElementById('save-char').textContent = saveData.characterName;
+  
+  const date = new Date(saveData.timestamp);
+  const timeStr = date.toLocaleString('zh-TW');
+  document.getElementById('save-time').textContent = timeStr;
+  
+  modal.classList.remove('hidden');
+}
+
+function loadGame() {
+  const saveData = getSaveData();
+  if (!saveData) return;
+  
+  selectedWorldKey = saveData.worldKey;
+  currentWorld = WORLDS[selectedWorldKey];
+  characterName = saveData.characterName;
+  conversationHistory = saveData.conversationHistory;
+  gameState = saveData.gameState;
+  
+  // Apply theme
+  document.body.className = '';
+  if (currentWorld.theme) document.body.classList.add('theme-' + currentWorld.theme);
+  
+  // Update UI labels
+  document.getElementById('game-title').textContent = '萬界模擬器';
+  document.getElementById('world-badge').textContent = currentWorld.badge;
+  document.getElementById('s-hp-label').textContent = currentWorld.hpLabel;
+  document.getElementById('s-mp-label').textContent = currentWorld.mpLabel;
+  document.getElementById('s-gold-label').textContent = currentWorld.goldLabel;
+  document.getElementById('s-skill-title').textContent = currentWorld.skillTitle;
+  document.getElementById('s-name').textContent = characterName;
+  
+  document.getElementById('load-game-modal').classList.add('hidden');
+  document.getElementById('modal-overlay').classList.add('hidden');
+  document.getElementById('death-overlay').classList.add('hidden');
+  
+  // Restore chat history
+  const feed = document.getElementById('story-feed');
+  feed.innerHTML = '';
+  
+  // Replay conversation to rebuild UI
+  conversationHistory.forEach((msg, i) => {
+    if (msg.role === 'user') {
+      addPlayerMsg(msg.content);
+    } else {
+      parseAndDisplay(msg.content, false);
+    }
+  });
+  
+  // Restore stats
+  updateStatsUI();
+  
+  document.getElementById('send-btn').disabled = gameState.isDead;
+  if (gameState.isDead) {
+    setTimeout(showDeath, 800);
+  }
+}
+
+function startNewGame() {
+  localStorage.removeItem('gameProgress');
+  document.getElementById('load-game-modal').classList.add('hidden');
+  selectedWorldKey = null;
+  document.querySelectorAll('.world-card').forEach(c => c.classList.remove('selected'));
+  checkStartReady();
+  document.getElementById('modal-overlay').classList.remove('hidden');
+}
+
+// ══════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════
+let currentWorld = null;
+let selectedWorldKey = null;
+let characterName = '';
+let conversationHistory = [];
+let gameState = { hp:100, hpMax:100, mp:100, mpMax:100, gold:0, realm:'—', location:'—', skills:[], items:[], npcs:[], isDead:false };
+let isLoading = false;
+let statsVisible = true;
+
+// ══════════════════════════════════════════
+// WORLD SELECT
+// ══════════════════════════════════════════
+function selectWorld(el) {
+  document.querySelectorAll('.world-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedWorldKey = el.dataset.world;
+  checkStartReady();
+}
+
+document.getElementById('char-name-input').addEventListener('input', checkStartReady);
+
+function checkStartReady() {
+  const name = document.getElementById('char-name-input').value.trim();
+  const btn = document.getElementById('start-btn');
+  if (selectedWorldKey && name.length >= 1) {
+    btn.disabled = false;
+    btn.textContent = `踏入【${WORLDS[selectedWorldKey].name}】`;
+  } else {
+    btn.disabled = true;
+    btn.textContent = '選擇世界並輸入名稱後開始';
+  }
+}
+
+function showWorldSelect() {
+  // Don't close load game modal if it's open
+  if (!document.getElementById('load-game-modal').classList.contains('hidden')) {
+    return;
+  }
+  
+  document.getElementById('modal-overlay').classList.remove('hidden');
+}
+
+// ══════════════════════════════════════════
+// START GAME
+// ══════════════════════════════════════════
+async function startGame() {
+  const name = document.getElementById('char-name-input').value.trim();
+  if (!selectedWorldKey || !name) return;
+
+  currentWorld = WORLDS[selectedWorldKey];
+  characterName = name;
+  conversationHistory = [];
+  gameState = { hp:100, hpMax:100, mp:100, mpMax:100, gold:0, realm:currentWorld.startRealm, location:'—', skills:[], items:[], npcs:[], isDead:false };
+
+  // Apply theme
+  document.body.className = '';
+  if (currentWorld.theme) document.body.classList.add('theme-' + currentWorld.theme);
+
+  // Update UI labels
+  document.getElementById('game-title').textContent = '萬界模擬器';
+  document.getElementById('world-badge').textContent = currentWorld.badge;
+  document.getElementById('s-hp-label').textContent = currentWorld.hpLabel;
+  document.getElementById('s-mp-label').textContent = currentWorld.mpLabel;
+  document.getElementById('s-gold-label').textContent = currentWorld.goldLabel;
+  document.getElementById('s-skill-title').textContent = currentWorld.skillTitle;
+  document.getElementById('s-name').textContent = characterName;
+
+  document.getElementById('modal-overlay').classList.add('hidden');
+  document.getElementById('death-overlay').classList.add('hidden');
+
+  // Clear story
+  const feed = document.getElementById('story-feed');
+  feed.innerHTML = '';
+  addSystemMsg(`── 踏入【${currentWorld.name}】的世界 ──`);
+
+  document.getElementById('send-btn').disabled = false;
+
+  // Send opening prompt
+  const openingMsg = currentWorld.openingPrompt(characterName);
+  await sendToAI(openingMsg, true);
+}
+
+// ══════════════════════════════════════════
+// AI COMMUNICATION
+// ══════════════════════════════════════════
+async function sendToAI(userMsg, isSystem = false) {
+  if (isLoading) return;
+  isLoading = true;
+  document.getElementById('send-btn').disabled = true;
+  document.getElementById('error-msg').style.display = 'none';
+
+  // Add user message to history
+  conversationHistory.push({ role: 'user', content: userMsg });
+
+  // Show loading
+  const loadEl = addLoadingIndicator();
+
+  try {
+    const response = await fetch(API_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        system: currentWorld.systemPrompt,
+        messages: conversationHistory
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+    const aiText = data.content || '';
+
+    // Add to history
+    conversationHistory.push({ role: 'assistant', content: aiText });
+
+    // Remove loading
+    loadEl.remove();
+
+    // Parse and display
+    parseAndDisplay(aiText, isSystem);
+    parseGameState(aiText);
+
+    // Check death
+    if (gameState.isDead) {
+      setTimeout(showDeath, 800);
+    }
+
+  } catch (err) {
+    loadEl.remove();
+    console.error('API Error:', err);
+    document.getElementById('error-msg').style.display = 'block';
+    document.getElementById('error-msg').textContent = `⚠ 呼叫失敗：${err.message}`;
+  }
+
+  isLoading = false;
+  if (!gameState.isDead) {
+    document.getElementById('send-btn').disabled = false;
+  }
+}
+
+function parseAndDisplay(text, isSystem) {
+  // Remove the JSON state block for display
+  const cleanText = text.replace(/【狀態更新】\{[\s\S]*?\}(\n|$)/g, '').trim();
+
+  // Split into narrative and choices
+  const lines = cleanText.split('\n');
+  let narrativeLines = [];
+  let choiceLines = [];
+
+  lines.forEach(line => {
+    const trimmed = line.trim();
+    if (/^[1-4][.、．]\s/.test(trimmed) || /^（[1-4]）/.test(trimmed)) {
+      choiceLines.push(trimmed);
+    } else if (trimmed) {
+      narrativeLines.push(trimmed);
+    }
+  });
+
+  const narrative = narrativeLines.join('\n');
+
+  const block = document.createElement('div');
+  block.className = 'story-block';
+
+  if (narrative) {
+    const narEl = document.createElement('div');
+    narEl.className = 'story-narration';
+    narEl.textContent = narrative;
+    block.appendChild(narEl);
+  }
+
+  if (choiceLines.length > 0) {
+    const choicesDiv = document.createElement('div');
+    choicesDiv.className = 'choices-block';
+    choiceLines.forEach((line, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'choice-btn';
+      // extract number
+      const numMatch = line.match(/^([1-4])/);
+      const num = numMatch ? numMatch[1] : (i+1);
+      const choiceText = line.replace(/^[1-4][.、．]\s*/, '').replace(/^（[1-4]）\s*/, '');
+      btn.innerHTML = `<span class="choice-num">${num}.</span>${choiceText}`;
+      btn.onclick = () => handleChoice(choiceText, btn);
+      choicesDiv.appendChild(btn);
+    });
+    block.appendChild(choicesDiv);
+  }
+
+  const feed = document.getElementById('story-feed');
+  feed.appendChild(block);
+  feed.scrollTop = feed.scrollHeight;
+}
+
+function handleChoice(text, btnEl) {
+  // Disable all choice buttons
+  document.querySelectorAll('.choice-btn').forEach(b => b.disabled = true);
+  // Show player choice
+  addPlayerMsg(text);
+  sendToAI(text);
+}
+
+// ══════════════════════════════════════════
+// SEND ACTION
+// ══════════════════════════════════════════
+async function sendAction() {
+  const input = document.getElementById('player-input');
+  const text = input.value.trim();
+  if (!text || isLoading || !currentWorld) return;
+
+  input.value = '';
+  input.style.height = 'auto';
+  addPlayerMsg(text);
+  await sendToAI(text);
+}
+
+function handleKeydown(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendAction();
+  }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+}
+
+// ══════════════════════════════════════════
+// PARSE GAME STATE
+// ══════════════════════════════════════════
+function parseGameState(text) {
+  const match = text.match(/【狀態更新】(\{[\s\S]*?\})(?:\n|$)/);
+  if (!match) return;
+  try {
+    const data = JSON.parse(match[1]);
+    gameState = { ...gameState, ...data };
+    updateStatsUI();
+    saveGame();  // Auto-save after each state update
+  } catch(e) { console.warn('State parse failed', e); }
+}
+
+function updateStatsUI() {
+  const s = gameState;
+  document.getElementById('s-name').textContent = characterName;
+  document.getElementById('s-realm').textContent = s.realm || '—';
+
+  const hpPct = Math.max(0, Math.min(100, (s.hp / s.hpMax) * 100));
+  document.getElementById('s-hp').textContent = `${s.hp}/${s.hpMax}`;
+  document.getElementById('hp-fill').style.width = hpPct + '%';
+  document.getElementById('s-hp').className = 'stat-val ' + (hpPct > 60 ? 'high' : hpPct > 30 ? 'med' : 'low');
+
+  const mpPct = Math.max(0, Math.min(100, (s.mp / s.mpMax) * 100));
+  document.getElementById('s-mp').textContent = `${s.mp}/${s.mpMax}`;
+  document.getElementById('mp-fill').style.width = mpPct + '%';
+
+  document.getElementById('s-gold').textContent = s.gold || 0;
+  document.getElementById('s-location').textContent = s.location || '—';
+
+  // Skills
+  const skillsEl = document.getElementById('skills-area');
+  if (s.skills && s.skills.length > 0) {
+    skillsEl.innerHTML = s.skills.map(sk => `<div style="padding:2px 0;border-bottom:1px solid rgba(58,42,26,0.4)">${sk}</div>`).join('');
+  } else {
+    skillsEl.textContent = '尚無習得';
+  }
+
+  // Items
+  const itemsEl = document.getElementById('items-area');
+  if (s.items && s.items.length > 0) {
+    itemsEl.innerHTML = s.items.map(it => `<span class="item-chip">${it}</span>`).join('');
+  } else {
+    itemsEl.textContent = '空空如也';
+  }
+
+  // NPCs
+  const npcEl = document.getElementById('npc-list');
+  if (s.npcs && s.npcs.length > 0) {
+    npcEl.innerHTML = s.npcs.map(n => `
+      <div class="npc-entry">
+        <div class="npc-name">${n.name}</div>
+        <div class="npc-rel">${n.rel}</div>
+      </div>`).join('');
+  } else {
+    npcEl.innerHTML = '<span style="font-size:0.72rem;color:var(--text3)">尚未遇見任何人</span>';
+  }
+}
+
+// ══════════════════════════════════════════
+// UI HELPERS
+// ══════════════════════════════════════════
+function addSystemMsg(text) {
+  const el = document.createElement('div');
+  el.className = 'story-system';
+  el.textContent = text;
+  const feed = document.getElementById('story-feed');
+  feed.appendChild(el);
+  feed.scrollTop = feed.scrollHeight;
+}
+
+function addPlayerMsg(text) {
+  const el = document.createElement('div');
+  el.className = 'story-block';
+  el.innerHTML = `<div class="story-player">${text}</div>`;
+  const feed = document.getElementById('story-feed');
+  feed.appendChild(el);
+  feed.scrollTop = feed.scrollHeight;
+}
+
+function addLoadingIndicator() {
+  const el = document.createElement('div');
+  el.className = 'story-block';
+  el.innerHTML = `<div class="loading-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>`;
+  const feed = document.getElementById('story-feed');
+  feed.appendChild(el);
+  feed.scrollTop = feed.scrollHeight;
+  return el;
+}
+
+function toggleStats() {
+  statsVisible = !statsVisible;
+  const panel = document.getElementById('stats-panel');
+  const btn = document.getElementById('stats-toggle');
+  if (statsVisible) {
+    panel.classList.remove('hidden');
+    btn.classList.add('active');
+  } else {
+    panel.classList.add('hidden');
+    btn.classList.remove('active');
+  }
+}
+
+// Stats panel default open
+document.getElementById('stats-toggle').classList.add('active');
+
+// Initialize on page load
+window.addEventListener('DOMContentLoaded', () => {
+  // Check for saved game
+  if (!checkForSavedGame()) {
+    // Show world select modal
+    document.getElementById('modal-overlay').classList.remove('hidden');
+  }
+});
+
+// ══════════════════════════════════════════
+// DEATH
+// ══════════════════════════════════════════
+function showDeath() {
+  document.getElementById('death-overlay').classList.remove('hidden');
+  document.getElementById('send-btn').disabled = true;
+}
+
+function restartGame() {
+  document.getElementById('death-overlay').classList.add('hidden');
+  // Reset and show world select
+  showWorldSelect();
+}
+</script>
+</body>
+</html>
